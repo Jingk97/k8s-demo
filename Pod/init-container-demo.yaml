@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: init-container
+  namespace: default
+spec:
+  volumes:
+    - name: workdir
+      emptyDir: {}
+  initContainers:
+    - name: change-index
+      image: busybox
+      command:
+        - "wget"
+        - "-O"
+        - "/workdir/index.html"
+        - "https://www.baidu.com/"
+      volumeMounts:
+        - mountPath: "/workdir"
+          name: workdir
+  containers:
+    - name: nginx
+      image: nginx
+      imagePullPolicy: IfNotPresent
+      ports:
+        - name: nginx-port
+          containerPort: 80
+          protocol: TCP
+      volumeMounts:
+        - mountPath: /usr/share/nginx/html
+          name: workdir
+  restartPolicy: Always
