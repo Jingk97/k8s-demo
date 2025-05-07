@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-default
+  labels:
+    role: nginx-default
+spec:
+  containers:
+    - name: nginx-default
+      image: nginx
+      imagePullPolicy: IfNotPresent
+      ports:
+        - name: nginx-default
+          containerPort: 80
+          protocol: TCP
+  restartPolicy: Always

@@ -1,0 +1,85 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: live-lottery-server
+  namespace: default
+  labels:
+    app: lottery-server
+    tier: backend
+spec:
+  ports:
+    - name: lottery-server
+      protocol: TCP
+      port: 80
+      targetPort: 8000
+  selector:
+    app: lottery-server
+    tier: backend
+  type: ClusterIP
+  sessionAffinity: None
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: datasource-lottery-server
+  namespace: default
+data:
+  GIN_MODE: "debug"
+  config.yaml: |
+    server_mark: "" # 服务端标志 取值选项"manage"表示服务只会提供后台管理端接口 "consumer" 只会提供C端接口,其他值一律视为 *测试* 所有接口都会提供
+    log_file: "log/live-lottery-backend.log" # 日志文件
+    swagger: true # 是否开启swagger api 文档开启后通过 http://localhost:8000/docs/index.html 访问
+
+    database:
+      type: "mysql"
+      user: "live-lottery"
+      pass: "GXmgBc2E0s"
+      host: "192.168.31.100"
+      port: 3306
+      db: "island_assist" # 数据库名称 需要预先创建好
+      max_idle: 10 # 连接池最大空闲连接数
+      max_open: 120 # 连接池最大打开连接数
+      max_lifetime: 1800 # 连接池连接最大生命周期 单位秒
+
+    oss:
+      cdn: "https://zlassets.livelab.com.cn"
+      access_key: "HPUAYJRYQMKJU2V7M3NX"
+      secret_key: "a8YjuR2Rn0WqM56Fgup6doiOa6VYFE1GtthUOTFy"
+      endpoint: "obs.cn-east-3.myhuaweicloud.com"
+      bucket: "obs-livelab-zlassets-prod" # 代码会检察桶是否存在,不存在则创建,需要保证分配的key具有相关权限
+      max_idle_conn: 1000
+      max_conn_per_host: 1000
+      idle_conn_timeout: 30
+
+    pic_limit: 10 # 后台上传图片大小限制 单位为M
+
+    kafka:
+      brokers:
+        - "192.168.31.116:9093"
+        - "192.168.31.212:9093"
+        - "192.168.31.38:9093"
+      username: "partner-dev"
+      password: "BzXhJwUt9qByov9r"
+
+    island:
+      app_key: "939702a7e8024b87be34def898b7dca2"
+      url: "https://partner-dev.livelab.com.cn/partnerAPI"
+      private_key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCFcNwxZcJ31o0e5GiH09Ct2bVRawb/uwL+1Etg2D31KboKEaE7BZ3qpikCE0XBfY7E0kvwjStCroegZ5bSYBwgegIqrQCKoP/QcJhKBRH8BAfuyJozvLciuHZLyMiXxMmW/9diTloy1dSmsjCzoC7KabkhHOjJkPi5gPnzmmI+dfCrnaMvowUjUrGkffKUW+CYIvhIqlAO02Kp7DDrYYIIvbOH3kWRY56PeqXZ3CRGlvsdkj68CMWHotxsZDTChNws0qrii08vSeGlO/1jVLFrdRt113OzbEhDJk/c1LJonXkoIhkKxk0KpNZMQlpKwX7YjbAndnKbjhxYhzZTq7/zAgMBAAECggEBAIKHeqzLWKX29oYwcVvkQ22711R0OB1xZqW1LqLmA/1MOtJcmnVssiN1NAn2pjZ2RnCbMXN188o/hSXQDsVtBDZ0gqgSIMR6ZqITcbR+LzBxFP1rtwNC53WMMRNCrY1gDr2pN5vO/wZZCrGg/mjHGN4g+tm8OK3rJJH46wdyjgV/zAAnt0zAomuwOh9X70HSUboEYrk1atqKSRmLQAv0OVVVs/qdu+NMAwAHHjg9nkQOOx7GznwHl47Gcf4x49itV51TtCJNYCRvgbR4oNciniaZ72lMW46E8IW0YwM9LY0zuKo+/4hfI+bS5dTYYFkRV+2ZDSP7d1YMw0L5GUzal7ECgYEA8gwd8L3daHt1qaBCNw4lM1af1eibGA2PB5Lv/F5tIH1kcl/PVzpLoK7pXi+lUmrgiqPA7wKIbFUYbpW/1sM7L1pv8zVOXQ4f3xDi2yfOS4DGlRR4F0a/osrsll9nAFk3giDJ6A7bYHqQVAKqQ3k0ZdyJ5yx/nBGIwFVkpu1Z+bsCgYEAjSIKrMSeIBEUtgLoRg27kokFLpCBgefTMs1EW7hlm0kaby2iV7EjuxvS7uVYC9KZEFMXNaMK6AuNzOOTr9iajPr5+o+U5JvhXfFdA5SpgZsFx2w1EoM3/kQ/rgO/Rqd5lrOtf2MyxFF4NzKzFU6r1IoCbKWFSFnOHlgq2msfsykCgYBR3ZNK14zJR+iWBKQgpuIiKQxKdy/txLg5oZMV0oIqWP7eSFWCdS8bG83Gk2rhI1Dq01PwAvVNXsKytGd8JfAgpf/zTHZCtwJEmhuAcEgv9VA1IAU2KjGqx+OZQI8/6O0DUD+6Azxjt1CVeYlI5Pe59AuYas6GZM/R7Y/rfZ/O/QKBgGyvuJTQXg3H2bFJj+LTFI6Gosz3UCTgiQ7ocSpJWUY7B/ZyqEDsE942UTzUtfd02ZduxcLyqqWEsFEHOWcEYhEL/pLtG/bp7KbSB5WIWPmMjujC9iQplWdk272A+T7KHqLmAEjH9gKl0vR/QNa53S4ykidlWL0dG9TWhTnroV/xAoGAaujtn/Rl25JRXrm+gVOTXxaD40Xxs+fVhJn//z2h8Tfl4aOo/+luVmCNWhzLNItGdbNdGvXL96G6zAkfMkw9NRWM6kaSOXgS84zjavX1NhEzOcTrGnSePS7y8WbFZd7mjd19dEBv2wpTbnK7UxN706+zJU5yieK7qS6hj6kWZ1w=
+        -----END RSA PRIVATE KEY-----
+    
+    
+    redis:
+      host: "192.168.31.59"
+      port: 6379
+      password: "rCMCLive2020"
+      db: 7
+    # ========================以下配置只有server_mark不为"consumer"才需要进行配置============================
+
+
+
+    cron: # 定时任务
+      tour: 60 # 定时请求接口拉取巡演数据 单位秒
+      periphery: 60 # 定时请求接口拉取商品周边数据 单位秒

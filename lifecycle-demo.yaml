@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: life-cycle  # 服务名称（按实际修改）
+  namespace: default      # 命名空间（按需调整）
+  labels:
+    app: life-cycle
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    rollingUpdate:
+      maxSurge: 5            # 滚动更新时最大激增Pod数
+      maxUnavailable: 2      # 确保更新期间始终有可用实例
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: life-cycle
+  template:
+    metadata:
+      name: life-cycle
+      labels:
+        app: life-cycle
+    spec:
+      containers:
+        - name: life-cycle
+          image: registry.cn-hangzhou.aliyuncs.com/abandon-j/nginx:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+              protocol: TCP
+          resources:
+            requests:
+              cpu: "250m"     # 最大2核CPU（防止节点资源耗尽）
+              memory: "500Mi" # 最大2GB内存（避免OOM Killer）
+            limits:
+              cpu: "250m"     # 最大2核CPU（防止节点资源耗尽）
+              memory: "500Mi" # 最大2GB内存（避免OOM Killer）
+          # 准备探针测试相关    
+          command: ["/bin/sh"]
+          args: 
+            - "-c"
+            - "echo start...;sleep 30;nginx -g 'daemon off;'"
+          # 探针清单
+          startupProbe: # 启动探针（慢启动应用必备）
+            httpGet:
+              path: /health-file-check
+              port: 80
+            initialDelaySeconds: 10        # 启动后10秒开始检查
+            periodSeconds: 6              # 每5秒检查一次
+            timeoutSeconds: 3             # 探针超时的秒数
+            failureThreshold: 10           # 允许的最大失败次数（慢启动预留足够时间）
+            successThreshold: 1             # 探针失败后最小连续成功次数
+          livenessProbe: # 存活探针
+            httpGet:
+              path: /health-file-check
+              port: 80
+            terminationGracePeriodSeconds: 10 # 宽限期是 Pod 中运行的进程收到终止信号后，到进程被终止信号强制停止之前的时间长度（以秒为单位）。
+            timeoutSeconds: 3             # 探针超时的秒数
+            successThreshold: 1             # 探针失败后最小连续成功次数
+            initialDelaySeconds: 0        # 应用启动后0秒开始检查
+            periodSeconds: 10              # 每10秒检查一次
+            failureThreshold: 2            # 连续失败2次后重启容器
+          readinessProbe: # 就绪探针
+            httpGet:
+              path: /health-file-check
+              port: 80
+            timeoutSeconds: 3             # 探针超时的秒数
+            successThreshold: 1             # 探针失败后最小连续成功次数
+            failureThreshold: 2            # 连续失败2次后重启容器
+            initialDelaySeconds: 0        # 启动后10秒开始检查
+            periodSeconds: 10              # 每10秒检查一次
+      restartPolicy: Always
